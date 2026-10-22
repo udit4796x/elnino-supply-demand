@@ -1,0 +1,203 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El Niño Supply-Demand Matcher</title>
+<style>
+:root{--navy:#202e3b;--gold:#d6a632;--teal:#43858a;--red:#b44936;--paper:#efefe5;--muted:#747d80}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:#29333d;font:15px Arial,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--navy);color:white;border-bottom:3px solid var(--gold);padding:17px 2.2%;display:flex;align-items:center;justify-content:space-between;gap:20px}
+h1,h2,h3,.metric strong{font-family:Georgia,serif}
+h1{font-size:30px;margin:0 0 10px}header p{margin:0;color:#aab9c3}
+button{cursor:pointer;border:1px solid #c8cbc4;background:white;padding:10px 15px;border-radius:4px;font-weight:bold;color:#29333d}
+button.primary{background:var(--gold);border-color:var(--gold);padding:13px 20px}
+button.active{background:var(--navy);color:white}
+main{padding:22px;max-width:1800px;margin:auto}
+.panel{background:white;border:1px solid #d2d3ca;border-radius:5px;padding:18px;margin-bottom:16px}
+h2{font-size:23px;margin:0 0 8px}
+h3{font-size:19px;margin:0 0 7px}
+.small{font-size:13px;color:var(--muted)}
+.headline{border-left:6px solid var(--red);padding:18px 22px}
+.headline strong{display:block;font: bold 29px Georgia,serif;margin:9px 0}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:12px}
+.step{padding:6px 10px;border-right:1px solid #d5d5cd}
+.step:last-child{border:0}
+.step b{display:block;margin:10px 0}
+.circle{display:inline-grid;place-items:center;background:var(--navy);color:white;width:32px;height:32px;border-radius:50%;margin-right:8px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:16px;margin-bottom:16px}
+.metric{background:white;border:1px solid #d0d1c9;border-radius:5px;padding:18px}
+.metric strong{display:block;font-size:33px;margin:10px 0 5px}
+.red{color:var(--red)}.teal{color:var(--teal)}
+.content{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.chart{width:100%;height:auto;display:block;margin-top:12px}
+.chart text{font:12px Arial;fill:#52606b}
+.legend{display:flex;gap:13px;flex-wrap:wrap;margin-top:12px;font-size:13px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:12px 9px;border-bottom:1px solid #e5e5df}
+th{background:#f6f6f0;color:#57616a}
+.tablewrap{overflow-x:auto}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}
+input[type=number]{width:90px;padding:8px;border:1px solid #c9cdc7;border-radius:4px}
+input[type=range]{width:100%;accent-color:#1976c9}
+.map{background:#d6e4e6;border:1px solid #b8c6c7;position:relative;overflow:hidden;min-height:310px;margin-top:15px}
+.map svg{width:100%;height:100%;min-height:310px;display:block}
+.bottom{display:grid;grid-template-columns:minmax(260px, .8fr) minmax(0,1.7fr);gap:16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:1050px){.content{grid-template-columns:1fr 1fr}.content .panel:last-child{grid-column:1/-1}.steps{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){header{align-items:flex-start;flex-direction:column}.metrics,.content,.bottom,.two{grid-template-columns:1fr}.content .panel:last-child{grid-column:auto}main{padding:10px}.headline strong{font-size:23px}.steps{grid-template-columns:1fr}.step{border-right:0;border-bottom:1px solid #ddd}}
+</style>
+</head>
+<body>
+<header>
+ <div><h1>El Niño Supply-Demand Matcher</h1><p>Match surplus grain regions with deficit regions across India</p></div>
+ <div><i style="color:#e2c36d;margin-right:22px">Normal year vs El Niño year</i><button class="primary" onclick="document.getElementById('inputs').scrollIntoView({behavior:'smooth'})">Compare view ↓</button></div>
+</header>
+<main>
+<section class="panel headline">
+ <div class="small"><b>THE RESULT AT A GLANCE</b></div>
+ <strong id="headline">A 15% fall in grain supply increases the regional shortfall</strong>
+ <span id="summary" class="small"></span>
+</section>
+
+<section class="panel">
+ <div class="small"><b>HOW IT WORKS</b>　 Grain moves from regions with a surplus to regions that fall short.</div>
+ <div class="steps">
+  <div class="step"><b><span class="circle">1</span>Enter the data</b><span class="small">Enter supply and demand for each region.</span></div>
+  <div class="step"><b><span class="circle">2</span>Find each balance</b><span class="small">Balance = supply − demand. Positive means surplus.</span></div>
+  <div class="step"><b><span class="circle">3</span>Sort the regions</b><span class="small">Sort surplus and deficit regions from largest to smallest.</span></div>
+  <div class="step"><b><span class="circle">4</span>Match surplus to deficit</b><span class="small">Allocate available grain to the largest remaining needs.</span></div>
+  <div class="step"><b><span class="circle">5</span>Repeat for El Niño</b><span class="small">Reduce supply and compare the results.</span></div>
+ </div>
+</section>
+
+<section class="metrics">
+ <div class="metric"><span class="small">Grain supply lost in El Niño</span><strong id="lost">−3,450</strong><span class="small" id="supplyCompare"></span></div>
+ <div class="metric"><span class="small">Demand left unmet</span><strong class="red" id="unmet">2,450</strong><span class="small">After matching available grain</span></div>
+ <div class="metric"><span class="small">Shortage</span><strong class="red" id="shortage">11.1%</strong><span class="small">Share of total demand</span></div>
+ <div class="metric"><span class="small">Most affected region</span><strong class="red" id="affected">Maharashtra</strong><span class="small" id="affectedQty"></span></div>
+</section>
+
+<section class="content">
+ <div class="panel">
+  <h2>Supply vs demand by region</h2><div class="small">Gold = demand. Teal and red = normal and El Niño supply.</div>
+  <div class="legend"><span><i class="dot" style="background:#d6a632"></i>Demand</span><span><i class="dot" style="background:#43858a"></i>Normal</span><span><i class="dot" style="background:#b44936"></i>El Niño</span></div>
+  <svg id="bars" class="chart" viewBox="0 0 450 285" role="img" aria-label="Regional supply and demand chart"></svg>
+ </div>
+ <div class="panel">
+  <h2>Shortfall before and after matching</h2><div class="small">Unmet demand before and after transfers.</div>
+  <div class="legend"><span><i class="dot" style="background:#d6a632"></i>Before</span><span><i class="dot" style="background:#b44936"></i>After</span></div>
+  <svg id="shortBars" class="chart" viewBox="0 0 450 285" role="img" aria-label="Shortfall chart"></svg>
+ </div>
+ <div class="panel">
+  <h2>Grain transfer map</h2><div class="small">Illustrative regional locations and transfer links</div>
+  <div class="controls"><button id="normalBtn" onclick="setYear(false)">Normal</button><button id="elninoBtn" class="active" onclick="setYear(true)">El Niño</button></div>
+  <div class="map"><svg id="mapSvg" viewBox="0 0 440 340" role="img" aria-label="Schematic map of grain transfers in India"></svg></div>
+  <div class="legend"><span>🟢 Surplus</span><span>🔵 Deficit covered</span><span>🔴 Deficit remains</span></div>
+ </div>
+</section>
+
+<section class="bottom" id="inputs">
+ <div class="panel">
+  <h2>Inputs</h2><p class="small">Change supply, demand, or the El Niño supply reduction.</p>
+  <label for="reduction">Supply reduction in El Niño: <b id="reductionLabel">15%</b></label>
+  <input id="reduction" type="range" min="0" max="60" value="15" oninput="recalculate()">
+  <div class="tablewrap"><table><thead><tr><th>Region</th><th>Supply</th><th>Demand</th></tr></thead><tbody id="inputRows"></tbody></table></div>
+  <div class="controls"><button onclick="addRegion()">+ Add</button><button onclick="removeRegion()">Remove last</button><button onclick="loadExample()">Example</button><button onclick="resetData()">Reset</button></div>
+  <button class="primary" style="width:100%" onclick="recalculate()">Compare Normal vs El Niño</button>
+ </div>
+ <div class="panel">
+  <div class="two">
+   <div><h2>Normal year</h2><div class="small">Supply exactly as entered</div><div class="metrics" style="display:block;margin-top:15px"><div class="metric"><span class="small">Total supply</span><strong class="teal" id="normalSupply">23,000</strong></div><div class="metric"><span class="small">Unmet demand</span><strong id="normalUnmet">0</strong></div></div><h3>Best matches</h3><div class="tablewrap"><table><thead><tr><th>From</th><th>To</th><th>Units</th></tr></thead><tbody id="normalMatches"></tbody></table></div></div>
+   <div><h2>El Niño year</h2><div class="small">Supply reduced by selected percentage</div><div class="metrics" style="display:block;margin-top:15px"><div class="metric"><span class="small">Total supply</span><strong class="red" id="elninoSupply">19,550</strong></div><div class="metric"><span class="small">Unmet demand</span><strong class="red" id="elninoUnmet">2,450</strong></div></div><h3>Best matches</h3><div class="tablewrap"><table><thead><tr><th>From</th><th>To</th><th>Units</th></tr></thead><tbody id="elninoMatches"></tbody></table></div></div>
+  </div>
+ </div>
+</section>
+<p class="small">Academic demonstration. Values are editable illustrative data, not live government grain-stock information or actual El Niño forecasts.</p>
+</main>
+<script>
+const initial=[
+ {name:"Punjab",supply:10000,demand:4000},
+ {name:"Haryana",supply:8000,demand:5000},
+ {name:"Rajasthan",supply:3000,demand:7000},
+ {name:"Maharashtra",supply:2000,demand:6000}
+];
+let regions=initial.map(x=>({...x})),showElNino=true;
+const fmt=n=>Math.round(n).toLocaleString("en-IN");
+function match(data){
+ let donors=data.map(r=>({name:r.name,left:Math.max(0,r.supply-r.demand)})).filter(r=>r.left>0).sort((a,b)=>b.left-a.left);
+ let receivers=data.map(r=>({name:r.name,left:Math.max(0,r.demand-r.supply)})).filter(r=>r.left>0).sort((a,b)=>b.left-a.left);
+ let transfers=[];
+ for(const rec of receivers)for(const don of donors){
+  if(rec.left<=0)break;
+  if(don.left<=0)continue;
+  let qty=Math.min(rec.left,don.left);
+  transfers.push({from:don.name,to:rec.name,qty});
+  rec.left-=qty;don.left-=qty;
+ }
+ return {transfers,remaining:receivers,totalUnmet:receivers.reduce((s,r)=>s+r.left,0)};
+}
+function renderInputs(){
+ document.getElementById("inputRows").innerHTML=regions.map((r,i)=>`<tr><td><input aria-label="Region name" value="${r.name}" onchange="regions[${i}].name=this.value;recalculate()" style="width:120px"></td><td><input aria-label="Supply" type="number" min="0" value="${r.supply}" onchange="regions[${i}].supply=Math.max(0,+this.value);recalculate()"></td><td><input aria-label="Demand" type="number" min="0" value="${r.demand}" onchange="regions[${i}].demand=Math.max(0,+this.value);recalculate()"></td></tr>`).join("");
+}
+function tableRows(id,result){
+ document.getElementById(id).innerHTML=result.transfers.length?result.transfers.map(t=>`<tr><td>${t.from}</td><td>${t.to}</td><td>${fmt(t.qty)}</td></tr>`).join(""):`<tr><td colspan="3">No transfers needed</td></tr>`;
+}
+function drawBars(normal,elnino){
+ const max=Math.max(1000,...regions.flatMap(r=>[r.supply,r.demand]));
+ let s=`<g stroke="#e4e4de"><path d="M45 30V235H430"/>`;
+ for(let k=0;k<=4;k++){let y=235-k*48;s+=`<path d="M45 ${y}H430"/><text x="39" y="${y+4}" text-anchor="end">${Math.round(max*k/4/1000)}k</text>`}
+ s+="</g>";
+ regions.forEach((r,i)=>{let x=65+i*90,w=15,scale=190/max;
+ [[r.demand,"#d6a632",0],[r.supply,"#43858a",19],[r.supply*(1-+document.getElementById("reduction").value/100),"#b44936",38]].forEach(([v,c,dx])=>{let h=v*scale;s+=`<rect x="${x+dx}" y="${235-h}" width="${w}" height="${h}" fill="${c}"><title>${r.name}: ${fmt(v)}</title></rect>`});s+=`<text x="${x+25}" y="255" text-anchor="middle">${r.name.length>10?r.name.slice(0,9):r.name}</text>`});
+ document.getElementById("bars").innerHTML=s;
+}
+function drawShort(normal,elnino){
+ let max=Math.max(1000,...regions.map(r=>r.demand));
+ let s='<g stroke="#e4e4de">';
+ for(let k=0;k<=4;k++){let y=235-k*48;s+=`<path d="M45 ${y}H430"/><text x="39" y="${y+4}" text-anchor="end">${Math.round(max*k/4/1000)}k</text>`}s+='</g>';
+ regions.forEach((r,i)=>{let x=60+i*90,scale=190/max,before=Math.max(0,r.demand-r.supply),after=Math.max(0,r.demand-r.supply*(1-+document.getElementById("reduction").value/100));s+=`<rect x="${x}" y="${235-before*scale}" width="26" height="${before*scale}" fill="#d6a632"/><rect x="${x+29}" y="${235-after*scale}" width="26" height="${after*scale}" fill="#b44936"/><text x="${x+27}" y="255" text-anchor="middle">${r.name.slice(0,8)}</text>`});
+ document.getElementById("shortBars").innerHTML=s;
+}
+const positions={"Punjab":[180,65],"Haryana":[215,100],"Rajasthan":[150,140],"Maharashtra":[210,230],"Karnataka":[175,275],"Uttar Pradesh":[260,120]};
+function drawMap(result,data){
+ let s='<defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6Z" fill="#244d70"/></marker></defs>';
+ s+='<path d="M170 25 L205 38 220 60 205 80 230 100 210 125 190 140 205 165 225 190 215 220 195 250 180 285 160 310 150 275 145 245 125 220 135 190 120 165 130 140 115 120 140 95 130 70 150 55Z" fill="#f3e9c9" stroke="#b5a781" stroke-width="2"/>';
+ result.transfers.forEach(t=>{let a=positions[t.from],b=positions[t.to];if(a&&b)s+=`<path d="M${a[0]} ${a[1]} L${b[0]} ${b[1]}" stroke="#244d70" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>`});
+ data.forEach(r=>{let p=positions[r.name];if(!p)return;let bal=r.supply-r.demand,color=bal>0?"#3c7b54":bal<0&&r.supply>0?"#43858a":"#b44936";s+=`<circle cx="${p[0]}" cy="${p[1]}" r="7" fill="${color}" stroke="white" stroke-width="2"/><text x="${p[0]+10}" y="${p[1]-8}" style="font-weight:bold;paint-order:stroke;stroke:#d6e4e6;stroke-width:3px">${r.name}</text>`});
+ document.getElementById("mapSvg").innerHTML=s;
+}
+function setYear(v){showElNino=v;document.getElementById("normalBtn").classList.toggle("active",!v);document.getElementById("elninoBtn").classList.toggle("active",v);recalculate()}
+function recalculate(){
+ let reduction=+document.getElementById("reduction").value/100;
+ document.getElementById("reductionLabel").textContent=Math.round(reduction*100)+"%";
+ let normal=regions.map(r=>({...r})),elnino=regions.map(r=>({...r,supply:Math.round(r.supply*(1-reduction))}));
+ let n=match(normal),e=match(elnino),totalDemand=regions.reduce((s,r)=>s+r.demand,0);
+ let totalSupply=regions.reduce((s,r)=>s+r.supply,0),lost=totalSupply-elnino.reduce((s,r)=>s+r.supply,0);
+ document.getElementById("lost").textContent="−"+fmt(lost);
+ document.getElementById("supplyCompare").textContent=fmt(totalSupply)+" normal; "+fmt(totalSupply-lost)+" El Niño";
+ document.getElementById("unmet").textContent=fmt(e.totalUnmet);
+ document.getElementById("shortage").textContent=(totalDemand?e.totalUnmet/totalDemand*100:0).toFixed(1)+"%";
+ let worst=[...e.remaining].sort((a,b)=>b.left-a.left)[0];
+ document.getElementById("affected").textContent=worst&&worst.left>0?worst.name:"None";
+ document.getElementById("affectedQty").textContent=worst&&worst.left>0?fmt(worst.left)+" units short":"No unmet demand";
+ document.getElementById("headline").textContent=`A ${Math.round(reduction*100)}% supply reduction leaves ${totalDemand?(e.totalUnmet/totalDemand*100).toFixed(1):"0.0"}% of demand unmet`;
+ document.getElementById("summary").textContent=`Normal year: ${n.totalUnmet?fmt(n.totalUnmet):"0"} unmet • El Niño year: ${fmt(e.totalUnmet)} unmet • Largest remaining deficit: ${worst&&worst.left>0?worst.name:"None"}`;
+ document.getElementById("normalSupply").textContent=fmt(totalSupply);
+ document.getElementById("elninoSupply").textContent=fmt(totalSupply-lost);
+ document.getElementById("normalUnmet").textContent=fmt(n.totalUnmet);
+ document.getElementById("elninoUnmet").textContent=fmt(e.totalUnmet);
+ tableRows("normalMatches",n);tableRows("elninoMatches",e);
+ drawBars(n,e);drawShort(n,e);drawMap(showElNino?e:n,showElNino?elnino:normal);
+}
+function addRegion(){if(regions.length>=10)return alert("Maximum 10 regions for this demo.");regions.push({name:"New Region",supply:1000,demand:1200});renderInputs();recalculate()}
+function removeRegion(){if(regions.length<=1)return alert("Keep at least one region.");regions.pop();renderInputs();recalculate()}
+function loadExample(){regions=initial.map(r=>({...r}));document.getElementById("reduction").value=15;renderInputs();recalculate()}
+function resetData(){regions=initial.map(r=>({...r}));document.getElementById("reduction").value=0;renderInputs();recalculate()}
+renderInputs();recalculate();
+</script>
+</body>
+</html>
